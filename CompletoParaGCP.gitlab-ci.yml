@@ -1,0 +1,128 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  # Prefixo do repositório no Docker Hub
+  REPO: $DOCKERHUB_REPO_PREFIX
+  # Tag única por commit + latest
+  TAG: ${CI_COMMIT_SHORT_SHA:-latest}
+  IMAGE_FRONTEND: docker.io/$REPO/frontend:$TAG
+  IMAGE_BACKEND:  docker.io/$REPO/backend:$TAG
+  IMAGE_DB:       docker.io/$REPO/mysql-db:$TAG
+  IMAGE_FRONTEND_LATEST: docker.io/$REPO/frontend:latest
+  IMAGE_BACKEND_LATEST:  docker.io/$REPO/backend:latest
+  IMAGE_DB_LATEST:       docker.io/$REPO/mysql-db:latest
+
+build_images:
+  stage: build
+  image: docker:24
+  services:
+    - docker:dind
+  before_script:
+    # Login no Docker Hub
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+  script:
+    # Build + tag dupla (commit + latest)
+    - docker build -t $IMAGE_FRONTEND -t $IMAGE_FRONTEND_LATEST -f Dockerfile.frontend .
+    - docker build -t $IMAGE_BACKEND  -t $IMAGE_BACKEND_LATEST  -f Dockerfile.backend .
+    - docker build -t $IMAGE_DB       -t $IMAGE_DB_LATEST       -f database/Dockerfile.db database/
+
+    # Push tudo
+    - docker push $IMAGE_FRONTEND && docker push $IMAGE_FRONTEND_LATEST
+    - docker push $IMAGE_BACKEND  && docker push $IMAGE_BACKEND_LATEST
+    - docker push $IMAGE_DB       && docker push $IMAGE_DB_LATEST
+
+    - echo "Imagens publicadas no Docker Hub com sucesso!"
+  only:
+    - main
+
+deploy_to_gke:
+  stage: deploy
+  image: google/cloud-sdk:alpine
+  before_script:
+    # Validar variáveis obrigatórias
+    - |
+      if [ -z "$DOCKERHUB_REPO_PREFIX" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASSWORD" ] || [ -z "$DB_ROOT_PASSWORD" ]; then
+        echo "Erro: Variáveis CI/CD obrigatórias não definidas (DOCKERHUB_REPO_PREFIX, DB_USER, DB_PASSWORD, DB_ROOT_PASSWORD)"
+        exit 1
+      fi
+
+    # Instalar ferramentas
+    - apk add --no-cache openssh-client gettext
+
+    # Setup de autenticação GCP
+    - echo "$GOOGLE_SERVICE_ACCOUNT_KEY" | base64 -d > /tmp/gcp-key.json
+    - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+    - gcloud config set project $GCP_PROJECT_ID
+    
+    # OPÇÃO A: Acesso direto ao cluster (se não usar Bastion)
+    # Descomente se não usar Bastion:
+    # - gcloud container clusters get-credentials $GKE_CLUSTER_NAME --zone $GKE_ZONE --project $GCP_PROJECT_ID
+
+    # OPÇÃO B: Acesso via Bastion SSH (recomendado para segurança)
+    # Descomente e configure se usar Bastion:
+    - |
+      if [ -n "$BASTION_KEY" ] && [ -n "$BASTION_HOST" ] && [ -n "$BASTION_USER" ] && [ -n "$KUBERNETES_API" ]; then
+        echo "$BASTION_KEY" | base64 -d > /tmp/bastion_key
+        chmod 600 /tmp/bastion_key
+        # Port forward via SSH
+        ssh -i /tmp/bastion_key -N -L 6443:${KUBERNETES_API}:6443 ${BASTION_USER}@${BASTION_HOST} &
+        SSH_PID=$!
+        sleep 2  # Esperar tunnel estabelecer
+        # Configurar kubeconfig para usar localhost
+        mkdir -p ~/.kube
+        # Baixar kubeconfig original (pode ser feito via gcloud ou armazenado em CI variables)
+        # gcloud container clusters get-credentials $GKE_CLUSTER_NAME --zone $GKE_ZONE
+        # echo "Tunnel SSH estabelecido com PID $SSH_PID"
+      fi
+
+  script:
+    # Criar cópia de deployment.yaml para substituição
+    - cp kubernetes/deployment.yml kubernetes/deployment.yml.tmp
+
+    # Substitui as imagens nos YAMLs pela tag correta (commit)
+    - sed -i "s|docker.io/$REPO/frontend:latest|${IMAGE_FRONTEND}|g" kubernetes/deployment.yml.tmp
+    - sed -i "s|docker.io/$REPO/backend:latest|${IMAGE_BACKEND}|g"  kubernetes/deployment.yml.tmp
+    - sed -i "s|docker.io/$REPO/mysql-db:latest|${IMAGE_DB}|g"       kubernetes/deployment.yml.tmp
+
+    # Validar YAML (opcional mas recomendado)
+    - kubectl apply -f kubernetes/deployment.yml.tmp --dry-run=client -o yaml > /dev/null && echo "YAML válido"
+
+    # Cria/atualiza o Secret (protegido)
+    - |
+      kubectl create secret generic db-secrets \
+        --from-literal=DB_USER=$DB_USER \
+        --from-literal=DB_PASSWORD=$DB_PASSWORD \
+        --from-literal=DB_ROOT_PASSWORD=$DB_ROOT_PASSWORD \
+        --from-literal=DB_HOST=mysql-service \
+        --dry-run=client -o yaml | kubectl apply -f -
+    
+    - echo "Secret 'db-secrets' criado/atualizado com sucesso"
+
+    # Deploy tudo em ordem
+    - kubectl apply -f kubernetes/persistence.yml
+    - kubectl apply -f kubernetes/deployment.yml.tmp
+    - kubectl apply -f kubernetes/service.yml
+
+    # Aguardar rollout dos deployments
+    - kubectl rollout status deployment/frontend-deployment -n default --timeout=5m
+    - kubectl rollout status deployment/backend-deployment -n default --timeout=5m
+    - kubectl rollout status deployment/mysql-deployment -n default --timeout=5m
+
+    - echo "Deploy concluído com sucesso!"
+    - echo "Imagens usadas - Frontend:" 
+    - echo $IMAGE_FRONTEND
+    - echo "Backend:"
+    - echo $IMAGE_BACKEND
+    - echo "Database:"
+    - echo $IMAGE_DB
+
+  after_script:
+    # Limpar arquivos temporários
+    - rm -f /tmp/gcp-key.json /tmp/bastion_key kubernetes/deployment.yml.tmp
+    # Encerrar SSH tunnel se iniciado
+    - if [ -n "$SSH_PID" ]; then kill $SSH_PID 2>/dev/null || true; fi
+
+  only:
+    - main
