@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+
+<!-- index.html - HTML - JavaScript - Bootstrap -->
+<!-- Formulário para enviar mensagens (nome,email, comentario)-->
+<!-- Exibe as últimas 5 mensagens enviadas -->
+
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deixe sua mensagem</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { padding: 2rem; background: #f8f9fa; }
+    .card { max-width: 800px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+
+<div class="card shadow">
+  <div class="card-body">
+    <h2 class="card-title text-center mb-4">Envie sua mensagem</h2>
+
+    <form id="mensagemForm">
+      <div class="mb-3">
+        <label class="form-label">Nome</label>
+        <input type="text" class="form-control" name="nome" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">E-mail</label>
+        <input type="email" class="form-control" name="email" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Comentário</label>
+        <textarea class="form-control" name="comentario" rows="4" required></textarea>
+      </div>
+
+      <div class="text-center">
+        <button type="submit" class="btn btn-primary btn-lg">Enviar registro</button>
+      </div>
+    </form>
+
+    <hr class="my-5">
+
+    <h4>Últimas 5 mensagens</h4>
+    <div id="loading" class="text-center my-3">
+      <div class="spinner-border text-primary" role="status"></div>
+    </div>
+    <table class="table table-striped table-hover" id="tabelaMensagens" style="display:none;">
+      <thead class="table-dark">
+        <tr>
+          <th>Nome</th>
+          <th>E-mail</th>
+          <th>Comentário</th>
+          <th>Data/Hora</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById('mensagemForm');
+  const tabela = document.getElementById('tabelaMensagens');
+  const tbody = tabela.querySelector('tbody');
+  const loading = document.getElementById('loading');
+
+  // Função para carregar as últimas 5 mensagens
+  async function carregarMensagens() {
+    try {
+      // Em Docker Compose local, usa localhost; em K8s usa o DNS do Service
+      const backendUrl = 'http://localhost:8080/get_messages.php';
+      const resp = await fetch(backendUrl);
+      const data = await resp.json();
+
+      tbody.innerHTML = '';
+      data.forEach(msg => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(msg.nome)}</td>
+          <td>${escapeHtml(msg.email)}</td>
+          <td>${escapeHtml(msg.comentario)}</td>
+          <td>${new Date(msg.enviado_em).toLocaleString('pt-BR')}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      tabela.style.display = 'table';
+      loading.style.display = 'none';
+    } catch (err) {
+      console.error(err);
+      loading.innerHTML = '<p class="text-danger">Erro ao carregar mensagens.</p>';
+    }
+  }
+
+  // Envio do formulário
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector('button');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    const formData = new FormData(form);
+
+    try {
+      // Em Docker Compose local, usa localhost; em K8s usa o DNS do Service
+      const backendUrl = 'http://localhost:8080/index.php';
+      const resp = await fetch(backendUrl, {
+        method: 'POST',
+        body: formData
+      });
+
+      const resultado = await resp.text();
+
+      if (resp.ok) {
+        alert('Mensagem enviada com sucesso!');
+        form.reset();
+        carregarMensagens(); // Atualiza a tabela
+      } else {
+        alert('Erro: ' + resultado);
+      }
+    } catch (err) {
+      alert('Erro de conexão com o backend');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Enviar registro';
+    }
+  });
+
+  // Função simples de escape contra XSS
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Carrega mensagens ao abrir a página
+  carregarMensagens();
+</script>
+
+</body>
+</html>

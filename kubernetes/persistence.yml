@@ -1,0 +1,14 @@
+# kubernetes/persistence.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  labels:
+    app: mysql-db
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard-rwo    # padrão do GKE (SSD)
+  resources:
+    requests:
+      storage: 10Gi                   # mínimo 10Gi recomendado

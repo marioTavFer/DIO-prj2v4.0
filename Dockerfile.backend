@@ -1,0 +1,23 @@
+FROM php:8.2-apache
+
+# Instala extensões PHP para MySQL
+RUN docker-php-ext-install pdo_mysql
+
+# define ServerName do localhost  para suprimir aviso AH00558
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+
+# Copia arquivos do backend
+COPY backend/ /var/www/html/
+
+# Configura permissões
+RUN chown -R www-data:www-data /var/www/html
+
+# habilta qualquer módulo Apache (só para os testes no docker-compose)
+RUN a2enmod rewrite
+
+# Muda porta default para 8080 (para não conflitar com frontend no pod)
+RUN sed -i 's/80/8080/g' /etc/apache2/ports.conf /etc/apache2/sites-available/000-default.conf
+
+EXPOSE 8080
+
+CMD ["apache2-foreground"]

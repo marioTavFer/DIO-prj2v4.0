@@ -1,0 +1,9 @@
+FROM mysql:8.0
+
+# Copia script de inicialização
+COPY schema.sql /docker-entrypoint-initdb.d/
+
+# Variáveis de ambiente serão fornecidas pelo Deployment via Secrets em runtime
+# MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD vêm do K8s
+
+EXPOSE 3306

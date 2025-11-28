@@ -1,0 +1,77 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: meubanco-frontend
+    ports:
+      - "8000:80"
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - meubanco-network
+    labels:
+      app: "frontend"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: meubanco-backend
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: mysql
+      DB_USER: mario
+      DB_PASSWORD: Senha123
+      DB_NAME: meubanco
+      ALLOWED_ORIGIN: "http://localhost:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - meubanco-network
+    labels:
+      app: "backend"
+
+  mysql:
+    build:
+      context: database
+      dockerfile: Dockerfile.db
+    container_name: meubanco-db
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: meubanco
+      MYSQL_USER: mario
+      MYSQL_PASSWORD: Senha123
+      MYSQL_ROOT_PASSWORD: Senha123
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-hlocalhost", "-uroot", "-pSenha123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - meubanco-network
+    labels:
+      app: "mysql"
+
+networks:
+  meubanco-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local

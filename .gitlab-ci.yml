@@ -1,0 +1,41 @@
+stages:
+  - build
+
+variables:
+
+  # Prefixo do repositório no Docker Hub
+  REPO: $DOCKERHUB_REPO_PREFIX
+  # Tag única por commit + latest
+  TAG: ${CI_COMMIT_SHORT_SHA}
+  IMAGE_FRONTEND: docker.io/$REPO/frontend:$CI_COMMIT_SHORT_SHA
+  IMAGE_BACKEND:  docker.io/$REPO/backend:$CI_COMMIT_SHORT_SHA
+  IMAGE_DB:       docker.io/$REPO/mysql-db:$CI_COMMIT_SHORT_SHA
+  IMAGE_FRONTEND_LATEST: docker.io/$REPO/frontend:latest
+  IMAGE_BACKEND_LATEST:  docker.io/$REPO/backend:latest
+  IMAGE_DB_LATEST:       docker.io/$REPO/mysql-db:latest
+
+build_images:
+  stage: build
+  image: docker:29.0.1
+  services:
+    - docker:29.0.1-dind
+  before_script:
+    # Login no Docker Hub
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+  script:
+    # Build + tag dupla (commit + latest)
+    - docker build -t $IMAGE_FRONTEND -t $IMAGE_FRONTEND_LATEST -f Dockerfile.frontend .
+    - docker build -t $IMAGE_BACKEND  -t $IMAGE_BACKEND_LATEST  -f Dockerfile.backend .
+    - docker build -t $IMAGE_DB       -t $IMAGE_DB_LATEST       -f database/Dockerfile.db database/
+
+    # Push tudo
+    - docker push $IMAGE_FRONTEND && docker push $IMAGE_FRONTEND_LATEST
+    - docker push $IMAGE_BACKEND  && docker push $IMAGE_BACKEND_LATEST
+    - docker push $IMAGE_DB       && docker push $IMAGE_DB_LATEST
+
+    - echo "Imagens publicadas no Docker Hub com sucesso!"
+  only:
+    - main
+
+
+

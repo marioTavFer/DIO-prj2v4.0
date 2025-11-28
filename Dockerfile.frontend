@@ -1,0 +1,7 @@
+FROM httpd:2.4-alpine
+
+# Copia arquivos do frontend
+COPY frontend/ /usr/local/apache2/htdocs/
+
+# Expõe porta 80
+EXPOSE 80
