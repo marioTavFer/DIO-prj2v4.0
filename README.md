@@ -43,6 +43,9 @@ https://gitlab.com/marioTavFer/DIO-prj2v4.0
 GitHub:
 https://github.com/marioTavFer/DIO-prj2v4.0
 
+Imagens no Docker Hub:
+https://hub.docker.com/repositories/marioltf
+
 
 
 ## Abaixo está a documentação do Projeto com a ajuda do copilot - Claude Haiku 4.5
