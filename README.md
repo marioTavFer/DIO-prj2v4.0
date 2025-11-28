@@ -90,7 +90,7 @@ docker-compose up -d
 4. Deploy em Kubernetes em ~5-10 minutos
 
 
-## ✅ Arquitetura
+## ✅ Arquitetura de teste local (dock-compose)
 
 ```
                         [Internet]
@@ -108,6 +108,58 @@ docker-compose up -d
                     (MySQL 3306)
                    + PVC Storage
 ```
+
+### ✅ Arquitetura para GCP - Cluster com VM Bastion
+
+```
+                        [Internet]
+                            |
+                  ┌─────────┴─────────┐
+                  |                   |
+              [SSH Tunnel]     [LoadBalancer]
+            via Bastion        port: 80
+              (6443)                 |
+                  |        ┌────────────────┐
+                  |        |                |
+            ┌─────┴──────┐ |                |
+            | via tunnel | | frontend-service
+            |            | |                |
+        [GCP Network]     ▼ ▼               ▼
+                    ┌──────────┐       ┌───────────────┐
+                    │ Frontend │       │ Frontend Svc  │
+                    │   Pod    │       │  LoadBalancer │
+                    │ (80)     │       │   :80→:80     │
+                    │ 2 replicas
+                    └─────┬────┘       └───────────────┘
+                          |
+                          | (localhost em dev)
+                          | (backend-service em prod)
+                          |
+                    ┌─────▼────┐       ┌───────────────┐
+                    │ Backend  │       │ Backend Svc   │
+                    │   Pod    │       │ ClusterIP     │
+                    │ (8080)   │       │  :8080→:8080  │
+                    │ 2 replicas
+                    └─────┬────┘       └───────────────┘
+                          |
+                    ┌─────▼────┐       ┌───────────────┐
+                    │  MySQL   │       │ MySQL Svc     │
+                    │   Pod    │       │ Headless      │
+                    │ (3306)   │       │ :3306→:3306   │
+                    │ 1 replica│       │               │
+                    │ + PVC    │       │               │
+                    └──────────┘       └───────────────┘
+```
+
+**Características**:
+1. ✅ 3 Pods SEPARADOS (frontend, backend, mysql)
+2. ✅ 3 Services ESPECÍFICOS
+3. ✅ Frontend usa DNS do Service (`backend-service`)
+4. ✅ Health checks implementados
+5. ✅ Resource limits configurados
+6. ✅ Security context aplicado
+7. ✅ Rolling updates sem downtime
+8. ✅ Bastion SSH para acesso seguro
 
 ## 🔐 Segurança
 
