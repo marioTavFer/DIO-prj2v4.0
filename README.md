@@ -1,5 +1,54 @@
 # 📱 Projeto de Mensagens - Frontend + Backend + Database
 
+# Objetivo: criação de uma pipeline de deploy com GitLab e Kubernetes 
+
+### Referência utilizada: do Prof. Denilson Bonatti (https://gitlab.com/denilsonbonatti/kubernetes-projeto2-dio)
+
+
+## Ambiente de desenvolvimento:
+
+<p>
+Windows 11 / WSL2 - Ubuntu com Docker Desktop V 4.51.0,IDE: Visual Studio Code + Copilot Pro; Terminal, Power Shell V.7.5.4, notepad++, GitHub Desktop. GitKraken, GitLab. Com o VS code, no copilot foram utilizadas as AIs: GPT-5 mini, Grok Code Fast 1,  Claude Haiku 4.5.
+</p>
+
+        - Criado o cluster no GCP com um VM Bastion.
+        - Criada a pipeline no GitLab com todas as variáveis protegidas.
+        - Instalado o GitKraken para controlar e fazer a atualização em real-time no GitLab durante a edição no VS Code.
+
+<p>
+Optei por utilizar a minha aplicação do primeiro projeto de kubernetes o que causou vários problemas com os deployments e, por consequencia, na pipeline. O que depois do terceiro dia, verificquei a conta do Google ultrapassando 50 reais, o que tornou inviável a continuação do teste, tendo que deletar o cluster e a VM Bastion.
+</p>
+
+<p>
+Continuando o projeto localmente, foi utilizado um docker-compose para fazer teste da aplicação localmente. Nas figuras abaixo encontram-se o build e deploy e mais a frontpage do projeto.
+<p>
+
+<div align="center">
+<p float="left">
+ <img src="VScode-terminal-v2.jpg" width="400" />
+</p>
+</div>
+
+<div align="center">
+<p float="left">
+ <img src="frontend-form-v2.jpg" width="400" />
+</p>
+</div>
+
+Links para repositórios do projeto:
+
+GitLab:
+https://gitlab.com/marioTavFer/DIO-prj2v4.0
+
+GitHub:
+https://github.com/marioTavFer/DIO-prj2v4.0
+
+
+
+## Abaixo está a documentação do Projeto com a ajuda do copilot - Claude Haiku 4.5
+
+
+
 ## 🎯 Visão Geral
 
 Sistema web simples para envio e listagem de mensagens, deployado em Kubernetes (GCP) com:
@@ -40,10 +89,6 @@ docker-compose up -d
 3. GitLab CI/CD executa pipeline automaticamente
 4. Deploy em Kubernetes em ~5-10 minutos
 
-## 📋 Documentação Completa
-
-- **[SETUP_CHECKLIST.md](./SETUP_CHECKLIST.md)** - Guia passo-a-passo de setup, CI variables, troubleshooting
-- **[ANALISE_CORRECOES.md](./ANALISE_CORRECOES.md)** - Detalhes técnicos das correções implementadas
 
 ## ✅ Arquitetura
 
@@ -133,7 +178,7 @@ kubectl logs -f deployment/frontend-deployment
 - **CI/CD**: GitLab CI
 - **Acesso**: Bastion VM SSH
 
-## 📞 Contato & Referências
+## 📞 Referências
 
 - [Kubernetes Docs](https://kubernetes.io/)
 - [GitLab CI/CD](https://docs.gitlab.com/ee/ci/)
@@ -141,5 +186,5 @@ kubectl logs -f deployment/frontend-deployment
 
 ---
 
-**Última atualização**: 27 de Novembro de 2025  
+**Última atualização**: 28 de Novembro de 2025  
 **Versão**: 1.0 ✅ Corrigido
