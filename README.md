@@ -16,7 +16,7 @@ Windows 11 / WSL2 - Ubuntu com Docker Desktop V 4.51.0,IDE: Visual Studio Code +
         - Instalado o GitKraken para controlar e fazer a atualização em real-time no GitLab durante a edição no VS Code.
 
 <p>
-Optei por utilizar a minha aplicação do primeiro projeto de kubernetes o que causou vários problemas com os deployments e, por consequencia, na pipeline. O que depois do terceiro dia, verificquei a conta do Google ultrapassando 50 reais, o que tornou inviável a continuação do teste, tendo que deletar o cluster e a VM Bastion.
+Optei por utilizar a minha aplicação do primeiro projeto de kubernetes o que causou vários problemas com os deployments e, por consequencia, na pipeline. O que depois do terceiro dia, verifiquei a conta do Google ultrapassando 50 reais, o que tornou inviável a continuação do teste, tendo que deletar o cluster e a VM Bastion.
 </p>
 
 <p>
